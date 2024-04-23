@@ -32,7 +32,8 @@ jobs:
  
       - name: Merge dev into temp-merge (dry run)
 
-        run: git merge --dry-run origin/develop
+        run: git merge --no-commit origin/develop
+
  
       - name: Fail workflow if conflicts with dev detected (optional)
 
