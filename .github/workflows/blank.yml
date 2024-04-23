@@ -1,22 +1,84 @@
- name: 'Nightly Merge'
 
-  on:
-    push:
-      branches:
-        - main
+name: CI/CD - Merge to Stage (dev to stage)
+ 
+on:
 
-  jobs:
-    nightly-merge:
+  workflow_dispatch:  # Manual trigger
+ 
+jobs:
 
-      runs-on: ubuntu-latest
+  merge-to-stage:
 
-      steps:
-      - name: Checkout
-        uses: actions/checkout@v1
+    runs-on: ubuntu-latest
 
-      - name: Nightly Merge
-        uses: robotology/gh-action-nightly-merge@v1.3.1
+    steps:
+
+      - uses: actions/checkout@v3
+ 
+      - name: Install git tools
+
+        run: sudo apt-get install git-mergetool
+ 
+      - name: Create temporary branch
+
+        run: git checkout -b temp-merge
+ 
+      - name: Fetch latest branches
+
+        run: git fetch origin develop staging
+ 
+      - name: Merge dev into temp-merge (dry run)
+
+        run: git merge --dry-run origin/develop
+ 
+      - name: Fail workflow if conflicts with dev detected (optional)
+
+        uses: actions/github-script@v6
+
         with:
-          stable_branch: 'main'
-          development_branch: 'dev'
-          allow_ff: false
+
+          script: |
+
+            if (steps.merge-dev.outputs.exit_code != 0) {
+
+              core.setFailed('Merge conflicts detected with dev! Resolve conflicts before merging to stage.')
+
+            }
+ 
+      - name: Merge dev into temp-merge
+
+        run: git merge origin/develop
+ 
+      - name: Address potential conflicts (optional)
+
+        run: |
+
+          git mergetool --tool your-merge-tool  # Replace with your preferred merge tool
+
+          git add .
+ 
+      - name: Push temporary branch (optional)
+
+        run: git push origin temp-merge
+ 
+      - name: Create Pull Request
+
+        uses: peter-evans/create-pull-request@v3
+
+        with:
+
+          token: " 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 "
+
+          commit-message: "Merge dev into stage (manually triggered)"
+
+          title: "Merge dev into stage (manually triggered)"
+
+          body: "This pull request was created upon manual trigger for merging dev changes to stage."
+
+          branch: temp-merge
+
+          base: staging
+ 
+      - name: Clean up temporary branch (optional)
+
+        run: git branch -d temp-merge
